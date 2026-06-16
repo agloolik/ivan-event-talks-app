@@ -182,6 +182,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${update.html}
                 </div>
                 <div class="card-actions">
+                    <div class="secondary-actions">
+                        <button class="btn-action btn-copy" data-id="${update.id}" title="Copier dans le presse-papier">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span class="action-text">Copier</span>
+                        </button>
+                        <button class="btn-action btn-csv" data-id="${update.id}" title="Exporter au format CSV">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Exporter CSV</span>
+                        </button>
+                    </div>
                     <button class="btn-tweet" data-id="${update.id}">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><g><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></g></svg>
                         Tweet this
@@ -192,6 +202,54 @@ document.addEventListener('DOMContentLoaded', () => {
             // Attach event listener directly to tweet button
             card.querySelector('.btn-tweet').addEventListener('click', () => {
                 openTweetModal(update);
+            });
+
+            // Attach copy action
+            const copyBtn = card.querySelector('.btn-copy');
+            copyBtn.addEventListener('click', () => {
+                const textToCopy = `BigQuery Update (${update.date}) - [${update.type}]\n\n${update.text}\n\nRead more: ${update.link || "https://cloud.google.com/bigquery"}`;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const textSpan = copyBtn.querySelector('.action-text');
+                    const originalText = textSpan.textContent;
+                    copyBtn.classList.add('copied');
+                    textSpan.textContent = 'Copié !';
+                    
+                    setTimeout(() => {
+                        copyBtn.classList.remove('copied');
+                        textSpan.textContent = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+
+            // Attach CSV export action
+            card.querySelector('.btn-csv').addEventListener('click', () => {
+                const headers = ["Date", "Type", "Text Content", "Link"];
+                const row = [update.date, update.type, update.text, update.link || "https://cloud.google.com/bigquery"];
+                
+                const escapeCSV = (val) => {
+                    if (val === null || val === undefined) return '""';
+                    return `"${val.toString().replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+                };
+                
+                const csvContent = headers.map(escapeCSV).join(",") + "\n" + row.map(escapeCSV).join(",");
+                
+                // Create a blob for safe downloading of special characters (UTF-8 with BOM)
+                const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                // Sanitize filename
+                const sanitizedDate = update.date.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const sanitizedType = update.type.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                
+                link.setAttribute("href", url);
+                link.setAttribute("download", `bq_release_${sanitizedDate}_${sanitizedType}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
             });
 
             feedContainer.appendChild(card);
