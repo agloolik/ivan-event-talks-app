@@ -24,6 +24,23 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 
     function init() {
+        // Theme toggle setup
+        const themeToggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        
+        if (currentTheme === 'light') {
+            document.body.classList.add('light-theme');
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            let theme = 'dark';
+            if (document.body.classList.contains('light-theme')) {
+                theme = 'light';
+            }
+            localStorage.setItem('theme', theme);
+        });
+
         fetchReleases(false);
 
         // Event Listeners
